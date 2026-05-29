@@ -15,7 +15,8 @@ import {
   MOCK_ANALYTICS,
 } from "@/data/mock"
 
-const STORAGE_KEY = "mousercv:behaviors:v1"
+const BEHAVIORS_STORAGE_KEY = "mousercv:behaviors:v1"
+const TRACKS_STORAGE_KEY = "mousercv:tracks:v1"
 const HISTORY_LIMIT = 50
 const TRACK_COLORS = [
   "#3b82f6",
@@ -69,6 +70,7 @@ interface AnnotationState {
   commitOutPoint: (frame: number, behavior: BehaviorType) => void
   removeBehavior: (id: number) => void
   updateBehavior: (id: number, patch: Partial<BehaviorSegment>) => void
+  updateBehaviorSilent: (id: number, patch: Partial<BehaviorSegment>) => void
   undo: () => void
   redo: () => void
   resetHistory: () => void
@@ -80,12 +82,25 @@ function hydrateBehaviors(): BehaviorSegment[] {
   if (typeof window === "undefined") return MOCK_BEHAVIORS
 
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY)
+    const stored = window.localStorage.getItem(BEHAVIORS_STORAGE_KEY)
     if (!stored) return MOCK_BEHAVIORS
-    const parsed = JSON.parse(stored)
-    return Array.isArray(parsed) ? parsed : MOCK_BEHAVIORS
+    const parsed: unknown = JSON.parse(stored)
+    return Array.isArray(parsed) ? (parsed as BehaviorSegment[]) : MOCK_BEHAVIORS
   } catch {
     return MOCK_BEHAVIORS
+  }
+}
+
+function hydrateTracks(): Track[] {
+  if (typeof window === "undefined") return MOCK_TRACKS
+
+  try {
+    const stored = window.localStorage.getItem(TRACKS_STORAGE_KEY)
+    if (!stored) return MOCK_TRACKS
+    const parsed: unknown = JSON.parse(stored)
+    return Array.isArray(parsed) ? (parsed as Track[]) : MOCK_TRACKS
+  } catch {
+    return MOCK_TRACKS
   }
 }
 
@@ -129,13 +144,15 @@ function clampBehaviorSegment(
   }
 }
 
+const initialTracks = hydrateTracks()
+
 export const useAnnotationStore = create<AnnotationState>((set, get) => ({
-  tracks: MOCK_TRACKS,
+  tracks: initialTracks,
   detections: MOCK_DETECTIONS,
   behaviors: hydrateBehaviors(),
   keyframes: MOCK_KEYFRAMES,
   analytics: MOCK_ANALYTICS,
-  selectedTrackId: MOCK_TRACKS[0]?.id ?? null,
+  selectedTrackId: initialTracks[0]?.id ?? null,
   selectedBehaviorId: null,
   pendingInPoint: null,
   pendingSelection: null,
@@ -317,6 +334,18 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       }
     }),
 
+  updateBehaviorSilent: (id: number, patch: Partial<BehaviorSegment>) =>
+    set((state) => {
+      const index = state.behaviors.findIndex((b) => b.id === id)
+      if (index === -1) return state
+
+      return {
+        behaviors: state.behaviors.map((behavior) =>
+          behavior.id === id ? clampBehaviorSegment(behavior, patch) : behavior
+        ),
+      }
+    }),
+
   undo: () =>
     set((state) => {
       const previous = state.history.at(-1)
@@ -362,20 +391,40 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   },
 }))
 
-let autosaveTimer: ReturnType<typeof setTimeout> | undefined
+let behaviorsAutosaveTimer: ReturnType<typeof setTimeout> | undefined
+let tracksAutosaveTimer: ReturnType<typeof setTimeout> | undefined
 let lastSavedBehaviors = useAnnotationStore.getState().behaviors
+let lastSavedTracks = useAnnotationStore.getState().tracks
 
 useAnnotationStore.subscribe((state) => {
   if (typeof window === "undefined") return
   if (state.behaviors === lastSavedBehaviors) return
 
-  if (autosaveTimer) window.clearTimeout(autosaveTimer)
+  if (behaviorsAutosaveTimer) window.clearTimeout(behaviorsAutosaveTimer)
   lastSavedBehaviors = state.behaviors
-  autosaveTimer = window.setTimeout(() => {
+  behaviorsAutosaveTimer = window.setTimeout(() => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.behaviors))
+      window.localStorage.setItem(
+        BEHAVIORS_STORAGE_KEY,
+        JSON.stringify(state.behaviors)
+      )
     } catch {
       // Ignore storage quota/privacy failures; annotations remain in memory.
+    }
+  }, 500)
+})
+
+useAnnotationStore.subscribe((state) => {
+  if (typeof window === "undefined") return
+  if (state.tracks === lastSavedTracks) return
+
+  if (tracksAutosaveTimer) window.clearTimeout(tracksAutosaveTimer)
+  lastSavedTracks = state.tracks
+  tracksAutosaveTimer = window.setTimeout(() => {
+    try {
+      window.localStorage.setItem(TRACKS_STORAGE_KEY, JSON.stringify(state.tracks))
+    } catch {
+      // Ignore storage quota/privacy failures; tracks remain in memory.
     }
   }, 500)
 })

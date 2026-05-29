@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { useAnnotationStore } from "./annotation-store"
 import type { BehaviorSegment, Keyframe, Track } from "@/types"
 
@@ -29,6 +29,37 @@ function resetStore() {
     future: [],
   })
 }
+
+function stubWindowStorage(initialEntries: Record<string, string> = {}) {
+  const items = new Map(Object.entries(initialEntries))
+  const storage: Storage = {
+    get length() {
+      return items.size
+    },
+    clear: vi.fn(() => items.clear()),
+    getItem: vi.fn((key: string) => items.get(key) ?? null),
+    key: vi.fn((index: number) => Array.from(items.keys())[index] ?? null),
+    removeItem: vi.fn((key: string) => {
+      items.delete(key)
+    }),
+    setItem: vi.fn((key: string, value: string) => {
+      items.set(key, value)
+    }),
+  }
+
+  vi.stubGlobal("window", {
+    localStorage: storage,
+    setTimeout: globalThis.setTimeout,
+    clearTimeout: globalThis.clearTimeout,
+  })
+
+  return storage
+}
+
+afterEach(() => {
+  vi.useRealTimers()
+  vi.unstubAllGlobals()
+})
 
 describe("annotation store track mutations", () => {
   beforeEach(() => {
@@ -126,6 +157,53 @@ describe("annotation store track mutations", () => {
   })
 })
 
+describe("annotation store track persistence", () => {
+  beforeEach(() => {
+    resetStore()
+  })
+
+  it("hydrates tracks and selectedTrackId from localStorage", async () => {
+    const storedTracks: Track[] = [
+      {
+        id: 3,
+        video_id: 12,
+        label: "Mouse 3",
+        color: "#22c55e",
+        is_active: true,
+      },
+    ]
+    stubWindowStorage({
+      "mousercv:tracks:v1": JSON.stringify(storedTracks),
+    })
+
+    vi.resetModules()
+    const { useAnnotationStore: freshStore } = await import("./annotation-store")
+
+    expect(freshStore.getState().tracks).toEqual(storedTracks)
+    expect(freshStore.getState().selectedTrackId).toBe(3)
+  })
+
+  it("autosaves tracks after the debounce window", () => {
+    vi.useFakeTimers()
+    const storage = stubWindowStorage()
+
+    useAnnotationStore.getState().addTrack()
+    vi.advanceTimersByTime(499)
+
+    expect(storage.setItem).not.toHaveBeenCalledWith(
+      "mousercv:tracks:v1",
+      expect.any(String)
+    )
+
+    vi.advanceTimersByTime(1)
+
+    expect(storage.setItem).toHaveBeenCalledWith(
+      "mousercv:tracks:v1",
+      JSON.stringify(useAnnotationStore.getState().tracks)
+    )
+  })
+})
+
 describe("annotation store selection annotations", () => {
   beforeEach(() => {
     resetStore()
@@ -204,5 +282,23 @@ describe("annotation store behavior resizing", () => {
       start_frame: 10,
       end_frame: 11,
     })
+  })
+
+  it("updateBehaviorSilent coalesces resize moves into one undo checkpoint", () => {
+    useAnnotationStore.getState().updateBehavior(4, {})
+    useAnnotationStore.getState().updateBehaviorSilent(4, { start_frame: 12 })
+    useAnnotationStore.getState().updateBehaviorSilent(4, { start_frame: 14 })
+    useAnnotationStore.getState().updateBehaviorSilent(4, { start_frame: 16 })
+
+    expect(useAnnotationStore.getState().history).toHaveLength(1)
+    expect(useAnnotationStore.getState().behaviors[0]).toMatchObject({
+      start_frame: 16,
+      end_frame: 20,
+    })
+
+    useAnnotationStore.getState().undo()
+
+    expect(useAnnotationStore.getState().history).toHaveLength(0)
+    expect(useAnnotationStore.getState().behaviors[0]).toEqual(baseBehaviors[0])
   })
 })

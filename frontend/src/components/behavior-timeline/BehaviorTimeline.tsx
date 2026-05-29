@@ -67,6 +67,7 @@ export function BehaviorTimeline() {
   const setPendingSelection = useAnnotationStore((s) => s.setPendingSelection)
   const clearPendingSelection = useAnnotationStore((s) => s.clearPendingSelection)
   const updateBehavior = useAnnotationStore((s) => s.updateBehavior)
+  const updateBehaviorSilent = useAnnotationStore((s) => s.updateBehaviorSilent)
 
   const [liveSelection, setLiveSelection] = useState<PendingSelection | null>(
     null
@@ -412,6 +413,7 @@ export function BehaviorTimeline() {
 
       const distance = Math.hypot(x - drag.startX, y - drag.startY)
       const didDrag = drag.didDrag || distance > DRAG_THRESHOLD_PX
+      const startedDrag = !drag.didDrag && didDrag
       dragRef.current = { ...drag, didDrag }
       if (!didDrag) return
 
@@ -429,17 +431,29 @@ export function BehaviorTimeline() {
       const segment = behaviors.find((behavior) => behavior.id === drag.segmentId)
       if (!segment) return
 
+      if (startedDrag) {
+        updateBehavior(segment.id, {})
+      }
+
       if (drag.mode === "resize-start") {
-        updateBehavior(segment.id, {
+        updateBehaviorSilent(segment.id, {
           start_frame: Math.min(frame, segment.end_frame - 1),
         })
       } else {
-        updateBehavior(segment.id, {
+        updateBehaviorSilent(segment.id, {
           end_frame: Math.max(frame, segment.start_frame + 1),
         })
       }
     },
-    [behaviors, fps, getGeometry, hitTestSegment, updateBehavior, xToFrame]
+    [
+      behaviors,
+      fps,
+      getGeometry,
+      hitTestSegment,
+      updateBehavior,
+      updateBehaviorSilent,
+      xToFrame,
+    ]
   )
 
   const handlePointerUp = useCallback(
