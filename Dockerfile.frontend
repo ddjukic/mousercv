@@ -3,8 +3,16 @@ FROM node:24-alpine AS build
 WORKDIR /app/frontend
 RUN corepack enable
 
+# Resilience against flaky networks during package fetches (pnpm honors npm_config_*).
+ENV npm_config_fetch_retries=5 \
+    npm_config_fetch_retry_mintimeout=10000 \
+    npm_config_fetch_retry_maxtimeout=120000 \
+    npm_config_fetch_timeout=300000
+
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+# Cache the pnpm content-addressable store across builds (BuildKit).
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
 COPY frontend/ ./
 RUN pnpm build

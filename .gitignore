@@ -27,7 +27,6 @@ models/
 /experiments/
 /shared/
 /infra/
-/.github/
 
 # claude-mem phantom/auto-generated stub dirs
 /.claude/projects/
