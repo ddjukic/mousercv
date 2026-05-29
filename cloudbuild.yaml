@@ -1,0 +1,21 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'europe-west1-docker.pkg.dev/$PROJECT_ID/mousercv/api:$COMMIT_SHA', '.']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'europe-west1-docker.pkg.dev/$PROJECT_ID/mousercv/api:$COMMIT_SHA']
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'mousercv-api'
+      - '--image=europe-west1-docker.pkg.dev/$PROJECT_ID/mousercv/api:$COMMIT_SHA'
+      - '--region=europe-west1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--memory=1Gi'
+      - '--cpu=1'
+      - '--set-env-vars=GCS_BUCKET=mousercv-data,GOOGLE_CLOUD_PROJECT=$PROJECT_ID'
+
+images:
+  - 'europe-west1-docker.pkg.dev/$PROJECT_ID/mousercv/api:$COMMIT_SHA'

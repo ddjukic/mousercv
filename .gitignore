@@ -1,0 +1,30 @@
+# MouserCV
+node_modules/
+dist/
+.venv/
+__pycache__/
+*.pyc
+backend/data/
+*.db
+.DS_Store
+.env
+
+# Video data (large files, not version controlled)
+data/
+*.MOV
+*.AVI
+*.mp4
+*.HEIC
+
+# Model weights (too large for git)
+models/
+*.pt
+
+# Unrelated / empty-stub trees excluded from the intern handoff repo
+/protain/
+/preseed_draft/
+/mousercv/
+/experiments/
+/shared/
+/infra/
+/.github/

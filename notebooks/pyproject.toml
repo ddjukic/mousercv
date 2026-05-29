@@ -1,0 +1,35 @@
+[project]
+name = "mousercv-notebooks"
+version = "0.1.0"
+description = "MouserCV notebook environment — DLC SuperAnimal + SAM3 on Apple Silicon (MPS)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    # PyTorch — arm64 wheel includes MPS support natively
+    "torch>=2.4",
+    "torchvision>=0.19",
+
+    # DeepLabCut — PyTorch backend, SuperAnimal model zoo (latest RC, no stable 3.x yet)
+    "deeplabcut[modelzoo]==3.0.0rc14",
+
+    # SAM3 / object tracking
+    "ultralytics>=8.3",
+
+    # Notebook / kernel
+    "ipykernel>=6.29",
+    "jupyter>=1.1",
+    "ipywidgets>=8.1",
+
+    # Data science — loose bounds so DLC's constraints can solve
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "matplotlib>=3.3,<3.9",
+    "scipy>=1.11",
+    "scikit-learn>=1.3",
+
+    # Video / image
+    "opencv-python>=4.10",
+    "Pillow>=10.4",
+]
+
+[tool.uv]
+prerelease = "allow"
