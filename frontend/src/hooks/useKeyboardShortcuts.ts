@@ -26,11 +26,17 @@ export function useKeyboardShortcuts() {
   const tracks = useAnnotationStore((s) => s.tracks)
   const behaviors = useAnnotationStore((s) => s.behaviors)
   const selectedTrackId = useAnnotationStore((s) => s.selectedTrackId)
+  const selectedBehaviorId = useAnnotationStore((s) => s.selectedBehaviorId)
   const pendingInPoint = useAnnotationStore((s) => s.pendingInPoint)
+  const pendingSelection = useAnnotationStore((s) => s.pendingSelection)
   const selectTrack = useAnnotationStore((s) => s.selectTrack)
   const addBehavior = useAnnotationStore((s) => s.addBehavior)
   const setInPoint = useAnnotationStore((s) => s.setInPoint)
   const clearInPoint = useAnnotationStore((s) => s.clearInPoint)
+  const clearPendingSelection = useAnnotationStore((s) => s.clearPendingSelection)
+  const commitSelectionBehavior = useAnnotationStore(
+    (s) => s.commitSelectionBehavior
+  )
   const commitOutPoint = useAnnotationStore((s) => s.commitOutPoint)
   const removeBehavior = useAnnotationStore((s) => s.removeBehavior)
   const undo = useAnnotationStore((s) => s.undo)
@@ -60,6 +66,11 @@ export function useKeyboardShortcuts() {
   }
 
   const stampBehavior = (behavior: BehaviorType) => {
+    if (pendingSelection) {
+      commitSelectionBehavior(behavior)
+      return
+    }
+
     if (selectedTrackId == null) return
 
     if (outPointArmedRef.current) {
@@ -170,6 +181,11 @@ export function useKeyboardShortcuts() {
   useHotkeys(
     "backspace,delete",
     () => {
+      if (selectedBehaviorId != null) {
+        removeBehavior(selectedBehaviorId)
+        return
+      }
+
       if (selectedTrackId == null) return
 
       const target = [...behaviors]
@@ -249,6 +265,7 @@ export function useKeyboardShortcuts() {
     () => {
       clearOutPointChord()
       clearInPoint()
+      clearPendingSelection()
       window.dispatchEvent(new Event(HOTKEY_LEGEND_CLOSE_EVENT))
     },
     HOTKEY_OPTIONS
