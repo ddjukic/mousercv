@@ -28,3 +28,9 @@ models/
 /shared/
 /infra/
 /.github/
+
+# claude-mem phantom/auto-generated stub dirs
+/.claude/projects/
+frontend/frontend/
+frontend/src/frontend/
+frontend/src/docs/

@@ -17,7 +17,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal, Eye, EyeOff, Trash2, Edit, Play, Keyboard } from "lucide-react"
+import {
+  MoreHorizontal,
+  Eye,
+  EyeOff,
+  Trash2,
+  Edit,
+  Play,
+  Keyboard,
+  Plus,
+} from "lucide-react"
 import { BEHAVIORS, BEHAVIOR_COLORS, BEHAVIOR_LABELS } from "@/types"
 import { useState } from "react"
 
@@ -27,11 +36,16 @@ export function TracksSidebar() {
   const keyframes = useAnnotationStore((s) => s.keyframes)
   const selectedTrackId = useAnnotationStore((s) => s.selectedTrackId)
   const selectTrack = useAnnotationStore((s) => s.selectTrack)
+  const addTrack = useAnnotationStore((s) => s.addTrack)
+  const removeTrack = useAnnotationStore((s) => s.removeTrack)
+  const updateTrack = useAnnotationStore((s) => s.updateTrack)
 
   const currentFrame = useVideoStore((s) => s.currentFrame)
   const fps = useVideoStore((s) => s.fps)
 
   const [showShortcuts, setShowShortcuts] = useState(false)
+  const [editingTrackId, setEditingTrackId] = useState<number | null>(null)
+  const [editingLabel, setEditingLabel] = useState("")
 
   // Find current behavior for selected track
   const currentBehavior = behaviors.find(
@@ -66,6 +80,23 @@ export function TracksSidebar() {
 
   const velocity = getVelocity()
 
+  const startRename = (trackId: number, label: string) => {
+    setEditingTrackId(trackId)
+    setEditingLabel(label)
+  }
+
+  const commitRename = () => {
+    if (editingTrackId == null) return
+
+    const label = editingLabel.trim()
+    if (label.length > 0) {
+      updateTrack(editingTrackId, { label })
+    }
+
+    setEditingTrackId(null)
+    setEditingLabel("")
+  }
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
@@ -77,6 +108,15 @@ export function TracksSidebar() {
           <Badge variant="secondary" className="font-mono text-[10px]">
             {tracks.length} tracks
           </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 gap-1 border-zinc-700 px-2 text-[10px] text-zinc-400"
+            onClick={addTrack}
+          >
+            <Plus className="h-3 w-3" />
+            Add mouse
+          </Button>
         </div>
       </div>
 
@@ -94,12 +134,33 @@ export function TracksSidebar() {
                 }`}
                 onClick={() => selectTrack(track.id)}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex min-w-0 items-center gap-2">
                   <div
-                    className="h-2.5 w-2.5 rounded-full"
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
                     style={{ backgroundColor: track.color }}
                   />
-                  <span className="text-xs text-zinc-200">{track.label}</span>
+                  {editingTrackId === track.id ? (
+                    <input
+                      className="h-6 min-w-0 flex-1 rounded border border-zinc-700 bg-zinc-950 px-1.5 text-xs text-zinc-100 outline-none focus:border-zinc-500"
+                      value={editingLabel}
+                      autoFocus
+                      onChange={(event) => setEditingLabel(event.target.value)}
+                      onBlur={commitRename}
+                      onClick={(event) => event.stopPropagation()}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.currentTarget.blur()
+                        } else if (event.key === "Escape") {
+                          setEditingTrackId(null)
+                          setEditingLabel("")
+                        }
+                      }}
+                    />
+                  ) : (
+                    <span className="truncate text-xs text-zinc-200">
+                      {track.label}
+                    </span>
+                  )}
                   {track.is_active && (
                     <Badge
                       variant="outline"
@@ -121,12 +182,24 @@ export function TracksSidebar() {
                       <MoreHorizontal className="h-3 w-3" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-36">
-                    <DropdownMenuItem className="text-xs">
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-36"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <DropdownMenuItem
+                      className="text-xs"
+                      onClick={() => startRename(track.id, track.label)}
+                    >
                       <Edit className="mr-2 h-3 w-3" />
                       Rename
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-xs">
+                    <DropdownMenuItem
+                      className="text-xs"
+                      onClick={() =>
+                        updateTrack(track.id, { is_active: !track.is_active })
+                      }
+                    >
                       {track.is_active ? (
                         <>
                           <EyeOff className="mr-2 h-3 w-3" />
@@ -139,7 +212,10 @@ export function TracksSidebar() {
                         </>
                       )}
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-xs text-destructive">
+                    <DropdownMenuItem
+                      className="text-xs text-destructive"
+                      onClick={() => removeTrack(track.id)}
+                    >
                       <Trash2 className="mr-2 h-3 w-3" />
                       Delete
                     </DropdownMenuItem>

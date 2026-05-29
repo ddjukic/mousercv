@@ -37,7 +37,7 @@ export function BboxOverlay({
 
     for (const det of detections) {
       const track = tracks.find((t) => t.id === det.track_id)
-      if (!track) continue
+      if (!track || !track.is_active) continue
 
       const x = det.x1 * scaleX
       const y = det.y1 * scaleY
