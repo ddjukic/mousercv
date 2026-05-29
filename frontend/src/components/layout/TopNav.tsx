@@ -29,6 +29,7 @@ import {
   videoStem,
 } from "@/lib/annotations-export"
 import { loadGitHubSettings } from "@/lib/github-settings"
+import { MountedVideosPicker } from "./MountedVideosPicker"
 import { PushToGitHubDialog } from "./PushToGitHubDialog"
 
 export function TopNav() {
@@ -186,6 +187,7 @@ export function TopNav() {
             Load a local .mov / .mp4 file into the player
           </TooltipContent>
         </Tooltip>
+        <MountedVideosPicker />
         <Tooltip>
           <TooltipTrigger asChild>
             <Button

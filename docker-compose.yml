@@ -1,0 +1,9 @@
+services:
+  annotate:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "8080:80"
+    volumes:
+      - ./videos:/videos

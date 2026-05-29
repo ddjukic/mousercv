@@ -39,6 +39,29 @@ pnpm dev
 
 Open the URL it prints (usually http://localhost:5173).
 
+### Run with Docker
+
+Put videos in `./videos`, then run:
+
+```bash
+docker compose up
+```
+
+Or build/run the image directly:
+
+```bash
+docker build -f Dockerfile.frontend -t mousercv .
+docker run -v "$PWD/videos:/videos" -p 8080:80 mousercv
+```
+
+Windows PowerShell:
+
+```powershell
+docker run -v "${PWD}/videos:/videos" -p 8080:80 mousercv
+```
+
+Open http://localhost:8080 and use **Folder** to load mounted videos.
+
 ### 4. Annotate
 
 1. Click **Load video** → pick a local `.mov` / `.mp4`. (The video never leaves your

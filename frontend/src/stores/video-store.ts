@@ -21,8 +21,19 @@ interface VideoState {
   setDurationFromMetadata: (durationSec: number) => void
   loadVideo: (id: number) => void
   loadLocalFile: (file: File) => void
+  loadRemoteUrl: (url: string, filename: string) => void
   stepFrame: (delta: number) => void
   seekToFrame: (frame: number) => void
+}
+
+function revokeBlobUrl(url: string | null) {
+  if (!url?.startsWith("blob:")) return
+
+  try {
+    URL.revokeObjectURL(url)
+  } catch {
+    // best-effort revoke; safe to ignore
+  }
 }
 
 export const useVideoStore = create<VideoState>((set, get) => ({
@@ -75,19 +86,24 @@ export const useVideoStore = create<VideoState>((set, get) => ({
   },
 
   loadLocalFile: (file: File) => {
-    const previous = get().videoUrl
-    if (previous && previous.startsWith("blob:")) {
-      try {
-        URL.revokeObjectURL(previous)
-      } catch {
-        // best-effort revoke; safe to ignore
-      }
-    }
+    revokeBlobUrl(get().videoUrl)
     const url = URL.createObjectURL(file)
     set({
       videoId: null,
       videoUrl: url,
       videoFilename: file.name,
+      currentTime: 0,
+      currentFrame: 0,
+      isPlaying: false,
+    })
+  },
+
+  loadRemoteUrl: (url: string, filename: string) => {
+    revokeBlobUrl(get().videoUrl)
+    set({
+      videoId: null,
+      videoUrl: url,
+      videoFilename: filename,
       currentTime: 0,
       currentFrame: 0,
       isPlaying: false,
