@@ -1,9 +1,10 @@
 # annotations/
 
 This folder collects **timestamped JSON annotation files** produced by the MouserCV
-annotation tool. Interns push their work here directly from the browser
-("Push to GitHub" button) — no local `git` required. Each push creates one new file;
-files are never overwritten because the filename carries an ISO timestamp.
+annotation tool. Interns push their work here from the browser ("Push to GitHub"
+button) — no local `git` required. Each push opens a **pull request** that adds one new
+file, so a maintainer reviews it before it merges. Files are never overwritten because
+the filename carries an ISO timestamp.
 
 ## Filename convention
 

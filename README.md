@@ -89,8 +89,10 @@ Open http://localhost:8080 and use **Folder** to load videos from the mounted fo
 ### 5. Save your work
 
 - **Export JSON** — downloads a timestamped `*.json` file to your computer.
-- **Push to GitHub** — commits the JSON straight into the repo's `annotations/` folder
-  (see setup below). This is the preferred way — no `git` needed on your machine.
+- **Push to GitHub** — opens a pull request that adds the JSON to the repo's
+  `annotations/` folder (see setup below). A maintainer reviews and merges it, so
+  nothing lands on `main` unreviewed. This is the preferred way — no `git` needed on
+  your machine.
 
 ---
 
@@ -102,13 +104,19 @@ So you can push annotations from the browser:
 2. Create a **fine-grained Personal Access Token**:
    GitHub → Settings → Developer settings → **Fine-grained tokens** → Generate new token.
    - **Repository access:** Only select repositories → `mousercv`.
-   - **Permissions:** Repository permissions → **Contents → Read and write**.
+   - **Permissions:** Repository permissions → **Contents → Read and write** *and*
+     **Pull requests → Read and write**.
    - Copy the token (starts with `github_pat_…`).
-3. In the annotation app, click **Push to GitHub**, paste the token (owner/repo/branch are
-   pre-filled), optionally set your name as "annotator", and click **Push**.
+3. In the annotation app, click **Push to GitHub**, paste the token (owner/repo/base
+   branch are pre-filled), optionally set your name as "annotator", and click **Push**.
    The token is stored only in your browser's localStorage; use **Forget token** to clear it.
 
-Each push creates a new timestamped file under `annotations/` — nothing is overwritten.
+Each push creates a fresh branch, commits a new timestamped file under `annotations/`,
+and **opens a pull request** into `main` — nothing is overwritten and nothing merges
+without a maintainer's review. The dialog links straight to the PR it opened.
+
+> **Maintainers:** to *enforce* review (so collaborators can't merge their own PRs),
+> enable a branch protection / ruleset on `main` requiring a pull-request review.
 
 ---
 
