@@ -41,12 +41,11 @@ Open the URL it prints (usually http://localhost:5173).
 
 ### Run with Docker
 
-**Collaborators — pull the prebuilt image (no build needed).** A multi-arch image
-(amd64 + arm64) is published to GHCR by CI on every push to `main`. Put videos in a
-local `videos/` folder and run:
+**Collaborators — pull the prebuilt image (no build, no login needed).** A multi-arch
+image (amd64 + arm64) is published publicly to GHCR by CI on every push to `main`. Put
+videos in a local `videos/` folder and run:
 
 ```bash
-docker login ghcr.io                      # one-time; use a GitHub PAT with read:packages
 docker run -v "$PWD/videos:/videos" -p 8080:80 ghcr.io/ddjukic/mousercv:latest
 ```
 
