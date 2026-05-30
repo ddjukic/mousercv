@@ -42,8 +42,28 @@ interface PushToGitHubDialogProps {
 type PushStatus =
   | { kind: "idle" }
   | { kind: "pushing" }
-  | { kind: "success"; htmlUrl: string | null; path: string }
+  | {
+      kind: "success"
+      prUrl: string | null
+      prNumber: number | null
+      path: string
+    }
   | { kind: "error"; message: string }
+
+/**
+ * Git-branch-safe slug. Dots are dropped (not just trimmed) so the branch can
+ * never contain a forbidden ".." sequence or a trailing dot; only alphanumerics
+ * and underscores survive, with runs collapsed to single dashes.
+ */
+function branchSlug(value: string): string {
+  return (
+    value
+      .replace(/[^A-Za-z0-9_]+/g, "-")
+      .replace(/-+/g, "-")
+      .slice(0, 60)
+      .replace(/^[-_]+|[-_]+$/g, "") || "annotations"
+  )
+}
 
 interface FieldProps {
   id: string
@@ -153,17 +173,41 @@ export function PushToGitHubDialog({
       const filename = `${stem}-annotations-${ts}.json`
       const path = folder ? `${folder}/${filename}` : filename
 
+      const annotator = settings.annotator.trim()
+      const bouts = behaviors.length
+      const rand = Math.random().toString(36).slice(2, 6)
+      const headBranch = `annotations/${branchSlug(stem)}-${ts}-${rand}`
+      const who = annotator ? ` by ${annotator}` : ""
+
       const result = await pushAnnotationsToGitHub({
         owner: settings.owner.trim(),
         repo: settings.repo.trim(),
-        branch: settings.branch.trim(),
+        baseBranch: settings.branch.trim(),
+        headBranch,
         path,
         content: jsonString,
-        message: `annotations: ${stem} (${behaviors.length} bouts)`,
+        message: `annotations: ${stem} (${bouts} bouts)${who}`,
+        prTitle: `Annotations: ${stem} (${bouts} bout${bouts === 1 ? "" : "s"})${who}`,
+        prBody: [
+          `Adds \`${path}\`.`,
+          "",
+          `- **Bouts:** ${bouts}`,
+          `- **Video:** ${videoFilename ?? "unknown"}`,
+          annotator ? `- **Annotator:** ${annotator}` : null,
+          "",
+          "Opened from the MouserCV annotation tool for review.",
+        ]
+          .filter((line) => line !== null)
+          .join("\n"),
         token: token.trim(),
       })
 
-      setStatus({ kind: "success", htmlUrl: result.htmlUrl, path })
+      setStatus({
+        kind: "success",
+        prUrl: result.prUrl,
+        prNumber: result.prNumber,
+        path,
+      })
     } catch (error) {
       const message =
         error instanceof Error
@@ -182,8 +226,9 @@ export function PushToGitHubDialog({
             Push annotations to GitHub
           </DialogTitle>
           <DialogDescription>
-            Commits {behaviors.length} bout{behaviors.length === 1 ? "" : "s"} as
-            a timestamped JSON file directly to the repository.
+            Opens a pull request adding {behaviors.length} bout
+            {behaviors.length === 1 ? "" : "s"} as a timestamped JSON file, so a
+            maintainer can review before it merges.
           </DialogDescription>
         </DialogHeader>
 
@@ -203,7 +248,7 @@ export function PushToGitHubDialog({
             />
             <Field
               id={`${idPrefix}-branch`}
-              label="Branch"
+              label="Base branch"
               value={settings.branch}
               onChange={updateField("branch")}
             />
@@ -229,7 +274,7 @@ export function PushToGitHubDialog({
             type="password"
             value={token}
             placeholder="github_pat_..."
-            helper="Fine-grained PAT scoped to the mousercv repo with Contents: Read & Write. Stored in this browser's localStorage."
+            helper="Fine-grained PAT scoped to the mousercv repo with Contents and Pull requests: Read & Write. Stored in this browser's localStorage."
             onChange={handleTokenChange}
           />
 
@@ -248,15 +293,19 @@ export function PushToGitHubDialog({
             <div className="flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 p-2 text-xs text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <div className="flex flex-col gap-0.5">
-                <span>Pushed {status.path}</span>
-                {status.htmlUrl ? (
+                <span>
+                  Opened pull request
+                  {status.prNumber ? ` #${status.prNumber}` : ""} for{" "}
+                  {status.path}
+                </span>
+                {status.prUrl ? (
                   <a
-                    href={status.htmlUrl}
+                    href={status.prUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 underline underline-offset-2"
                   >
-                    View on GitHub
+                    Review pull request
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 ) : null}
