@@ -10,14 +10,15 @@ backend/data/
 .env
 
 # Video data (large files, not version controlled)
-data/
+# Anchored to repo root so it does NOT swallow frontend/src/data/ (app source).
+/data/
 *.MOV
 *.AVI
 *.mp4
 *.HEIC
 
 # Model weights (too large for git)
-models/
+/models/
 *.pt
 
 # Unrelated / empty-stub trees excluded from the intern handoff repo
