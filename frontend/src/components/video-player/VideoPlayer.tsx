@@ -1,6 +1,11 @@
 import { useRef, useEffect, useCallback, useState } from "react"
 import { useVideoStore } from "@/stores/video-store"
 import { useAnnotationStore } from "@/stores/annotation-store"
+import { useDebugStore } from "@/stores/debug-store"
+import {
+  mediaErrorMessage,
+  summarizeVideoElement,
+} from "@/lib/video-diagnostics"
 import { PlaybackControls } from "./PlaybackControls"
 import { BboxOverlay } from "./BboxOverlay"
 
@@ -11,6 +16,7 @@ export function VideoPlayer() {
     width: 1280,
     height: 720,
   })
+  const [hasVideoError, setHasVideoError] = useState(false)
 
   const {
     isPlaying,
@@ -28,6 +34,18 @@ export function VideoPlayer() {
   const allDetections = useAnnotationStore((s) => s.detections)
   const tracks = useAnnotationStore((s) => s.tracks)
   const detections = allDetections[currentFrame] ?? []
+  const lastVideoUrlRef = useRef(videoUrl)
+
+  useEffect(() => {
+    if (lastVideoUrlRef.current === videoUrl) return
+
+    lastVideoUrlRef.current = videoUrl
+    const id = window.setTimeout(() => {
+      setHasVideoError(false)
+    }, 0)
+
+    return () => window.clearTimeout(id)
+  }, [videoUrl])
 
   // Sync video element with store state
   useEffect(() => {
@@ -81,6 +99,33 @@ export function VideoPlayer() {
       setDurationFromMetadata(video.duration)
     }
   }, [setDurationFromMetadata])
+
+  const handleLoadedData = useCallback(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    setHasVideoError(false)
+    useDebugStore.getState().log({
+      level: "info",
+      source: "video",
+      message: "Loaded video data",
+      detail: summarizeVideoElement(video),
+    })
+  }, [])
+
+  const handleVideoError = useCallback(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    const message = mediaErrorMessage(video.error)
+    useDebugStore.getState().log({
+      level: "error",
+      source: "video",
+      message,
+      detail: `${summarizeVideoElement(video)} | currentSrc=${video.currentSrc}`,
+    })
+    setHasVideoError(true)
+  }, [])
 
   const handleVideoEnd = useCallback(() => {
     setPlaying(false)
@@ -181,6 +226,8 @@ export function VideoPlayer() {
             src={videoUrl}
             className="h-full w-full object-contain"
             onLoadedMetadata={handleLoadedMetadata}
+            onLoadedData={handleLoadedData}
+            onError={handleVideoError}
             onTimeUpdate={handleTimeUpdate}
             onEnded={handleVideoEnd}
             playsInline
@@ -224,6 +271,13 @@ export function VideoPlayer() {
           videoWidth={videoDimensions.width}
           videoHeight={videoDimensions.height}
         />
+
+        {hasVideoError ? (
+          <div className="absolute inset-x-8 top-1/2 z-20 -translate-y-1/2 rounded-md border border-red-500/50 bg-red-950/85 px-4 py-3 text-center text-sm font-medium text-red-100 shadow-lg">
+            ⚠ Video failed to display — likely an unsupported codec (e.g.
+            HEVC/H.265 .MOV). Open Debug for details.
+          </div>
+        ) : null}
 
         {/* Time overlay */}
         <div className="absolute bottom-2 left-2 rounded bg-black/70 px-2 py-0.5 font-mono text-xs text-zinc-300">

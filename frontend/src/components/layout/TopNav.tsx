@@ -31,6 +31,7 @@ import {
 import { loadGitHubSettings } from "@/lib/github-settings"
 import { MountedVideosPicker } from "./MountedVideosPicker"
 import { PushToGitHubDialog } from "./PushToGitHubDialog"
+import { DebugPanel } from "./DebugPanel"
 
 export function TopNav() {
   const [syncing, setSyncing] = useState(false)
@@ -273,6 +274,7 @@ export function TopNav() {
             Push annotations JSON straight to GitHub
           </TooltipContent>
         </Tooltip>
+        <DebugPanel />
       </div>
       <PushToGitHubDialog open={pushOpen} onOpenChange={setPushOpen} />
     </header>

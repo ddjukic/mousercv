@@ -6,10 +6,12 @@ import { BehaviorTimeline } from "@/components/behavior-timeline"
 import { TracksSidebar } from "@/components/tracks-sidebar"
 import { AnalyticsPanel } from "@/components/analytics"
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts"
+import { useGlobalErrorCapture } from "@/hooks/useGlobalErrorCapture"
 import { HotkeyLegend } from "@/components/layout/HotkeyLegend"
 
 function AppContent() {
   useKeyboardShortcuts()
+  useGlobalErrorCapture()
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-100">
